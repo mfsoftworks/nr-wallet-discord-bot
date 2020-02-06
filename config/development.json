@@ -7,12 +7,12 @@
         "keyPrefix": ""
     },
     "port": 8000,
-    "discord_token": "NjY0MDYyMDk4MTE2MDUwOTQ1.Xhk_UQ.7q4GWZos4sI41EJHxbFNSLXfcCE",
+    "discord_token": "NjY0MDYyMDk4MTE2MDUwOTQ1.Xjy7Yg.3RbG9hAijHnXsAMld8TsSFr-1ac",
     "wallet": {
         "app": "https://wallet.nygmarosebeauty.com",
-        "endpoint": "https://api.escape.nygmarosebeauty.com",
-        "client": 3,
-        "secret": "53r68Lnb32ai34WAVjrgg6TCMItRnxaW0yuhTKFz",
+        "endpoint": "https://api.wallet.nygmarosebeauty.com",
+        "client": 5,
+        "secret": "locDZdmXmV0ZTypgvX6umRNEt6CuHkEgIC2Zyv13",
         "redirect_uri": "http://58.182.15.231/authorise",
         "scope": "*"
     }

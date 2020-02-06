@@ -16,7 +16,7 @@ export class TransactionService {
     public save(transaction: Transaction): Promise<string> {
         const message = transaction.message
         delete transaction.message
-        return this.client.set(`transaction:${message.guild.id}:${message.author.id}`, transaction.toJSON())
+        return this.client.set(`transaction:${message.guild.id}:${message.author.id}`, JSON.stringify(transaction))
     }
 
     // Pull pending transaction from database
