@@ -35,8 +35,4 @@ lerna-debug.log*
 
 # Config
 /config/*
-<<<<<<< HEAD
 !/config/default.json
-=======
-!/config/default.json
->>>>>>> origin/master
