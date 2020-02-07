@@ -13,7 +13,7 @@ export class ProfileService {
 
     // Save user
     public save(profile: Profile): Promise<string> {
-        return this.client.set(`user:${profile.id}`, profile.toJSON())
+        return this.client.set(`user:${profile.id}`, JSON.stringify(profile))
     }
 
     // Get user

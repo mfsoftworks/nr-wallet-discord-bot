@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/camelcase */
-import { Controller, Get, Query, HttpService } from '@nestjs/common';
+import { Controller, Get, Query, HttpService, Redirect } from '@nestjs/common';
 import { SHA256, enc } from 'crypto-js';
 import config from 'config';
 import { ProfileService } from './shared/services/profile/profile.service';
@@ -13,6 +13,12 @@ export class AppController {
         private readonly http: HttpService,
         private _profile: ProfileService
     ) {}
+
+    @Get()
+    @Redirect(config.get('wallet.app'), 301)
+    home(): void {
+        return;
+    }
 
     @Get('authorise')
     authorise(@Query('code') code: string, @Query('state') state?: string): Observable<string> {
@@ -37,14 +43,13 @@ export class AppController {
             redirect_uri: config.get('wallet.redirect_uri'),
             code
         }).pipe(
-            tap(d => console.log('Wallet server authorise response', d)),
             map(d => d.data.access_token),
             tap(token => console.log('Token:', token)),
             map(token => {
                 // TODO: Get data from server
 
                 // Create profile and save
-                this._profile.save(new Profile({
+                const user = new Profile({
                     id,
                     token,
                     balance: {
@@ -52,7 +57,10 @@ export class AppController {
                         pending: 0
                     },
                     currency: 'SGD'
-                }));
+                })
+                console.log('Account', user);
+                console.log('JSON:', JSON.stringify(user));
+                this._profile.save(user);
 
                 // Return success page
                 return 'Account successfully linked!'

@@ -1,6 +1,5 @@
 import { Message } from 'discord.js'
 import Decimal from 'decimal.js'
-// TODO: Use Redis Cache
 
 export class Transaction {
     public message: Message
@@ -32,9 +31,5 @@ export class Transaction {
         return `Awesome! I'll ${this.action === 'split' ? 'split' : 'send'}:\n\n` +
         `${this.amount} ${this.currency} ${this.action === 'split' ? 'between' : 'to'} ${this.users.length === 1 ? `<@${this.users[0]}>\n` : this.users.reduce((t: string, u: string) => t += `<@${u}>\n`, '\n\n')}` +
         `\nSend a \`$confirm\` to confirm this transaction`
-    }
-
-    toJSON(): string {
-        return JSON.stringify(this)
     }
 }

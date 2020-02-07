@@ -1,0 +1,19 @@
+{
+    "redis": {
+        "host": "127.0.0.1",
+        "port": 6379,
+        "db": 0,
+        "password": "",
+        "keyPrefix": ""
+    },
+    "port": 8000,
+    "discord_token": "NjY0MDYyMDk4MTE2MDUwOTQ1.Xjy7Yg.3RbG9hAijHnXsAMld8TsSFr-1ac",
+    "wallet": {
+        "app": "https://wallet.nygmarosebeauty.com",
+        "endpoint": "https://api.wallet.nygmarosebeauty.com",
+        "client": 5,
+        "secret": "locDZdmXmV0ZTypgvX6umRNEt6CuHkEgIC2Zyv13",
+        "redirect_uri": "http://58.182.15.231/authorise",
+        "scope": "*"
+    }
+}
