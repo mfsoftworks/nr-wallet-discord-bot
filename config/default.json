@@ -11,9 +11,14 @@
     "wallet": {
         "app": "",
         "endpoint": "",
+        "api": "",
         "client": 0,
         "secret": "",
         "redirect_uri": "",
         "scope": ""
+    },
+    "fx": {
+        "url": "",
+        "client_id": ""
     }
 }

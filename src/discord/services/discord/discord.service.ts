@@ -9,6 +9,8 @@ import { Transaction } from '../../../shared/core/transaction';
 import { ProfileService } from '../../../shared/services/profile/profile.service';
 import { TransactionService } from '../../../shared/services/transaction/transaction.service';
 import { Args } from '../../core/args';
+import { BalanceAmount } from 'src/discord/core/balance';
+import { MoneyService } from '../money/money.service';
 
 interface Keywords {
     currency: string[];
@@ -30,6 +32,7 @@ export class DiscordService {
     }
 
     constructor(
+        private _money: MoneyService,
         private _profile: ProfileService,
         private _transaction: TransactionService
     ) {
@@ -52,6 +55,7 @@ export class DiscordService {
     }
 
     private async onMessage(message: Message): Promise<Message | Message[]> {
+        let channel: DMChannel
         let user: Profile
         const args = new Args(message.content)
         console.log('Received', args)
@@ -87,7 +91,7 @@ export class DiscordService {
                 }
 
                 // Create DM channel
-                const channel = await message.author.createDM()
+                channel = await message.author.createDM()
 
                 // Send link to channel
                 if (channel) {
@@ -96,7 +100,11 @@ export class DiscordService {
                             .setTitle('NR Wallet Login Link')
                             .setDescription(`Hey ${message.author.toString()}, you can link your wallet here. You'll be asked to login and then you'll be directed back to our website once your account is linked! Just click the title right there.`)
                             .setColor(DiscordService.colours.info)
-                            .setURL(`${config.get('wallet.endpoint')}/oauth/authorize?client_id=${config.get('wallet.client')}&redirect_uri=${config.get('wallet.redirect_uri')}&response_type=code&scope=${config.get('wallet.scope')}&state=${message.author.id},${SHA256(message.author.id, config.get('wallet.secret')).toString(enc.Hex)}`)
+                            .setURL(
+                                encodeURI(
+                                    `${config.get('wallet.endpoint')}/oauth/authorize?client_id=${config.get('wallet.client')}&redirect_uri=${config.get('wallet.redirect_uri')}&response_type=code&scope=${config.get('wallet.scope')}&state=${message.author.id},${SHA256(message.author.id, config.get('wallet.secret')).toString(enc.Hex)}`
+                                )
+                            )
                             .setThumbnail('https://glamsquad.sgp1.cdn.digitaloceanspaces.com/SocialHub/default/images/Logo_Transparent%20White.png')
                     )
 
@@ -117,10 +125,11 @@ export class DiscordService {
                 // Check if user is linked
                 if (!this.linkCheck(user, message)) return
 
-                // TODO: Update user balance
-
-                // Send users available and pending balance
-                message.reply(`Available balance: ${user.balance.available} ${user.currency}\nPending balance: ${user.balance.pending} ${user.currency}`)
+                // Get user balance
+                this._profile.balance(user).subscribe((b: BalanceAmount) => {
+                    // Send users available and pending balance
+                    message.reply(`Available balance: ${this._money.format(b.amount, b.currency)}`);
+                });
                 break
 
             case '$wallet':
@@ -243,10 +252,26 @@ export class DiscordService {
 
                 // Send warning if guild
                 if (message.guild) {
-                    message.reply(`Shhh... we shouldn't talk about that here`)
+                    message.reply(`Shhh... we shouldn't talk about that here, I'll DM you`)
                 }
 
                 // TODO: Get sources and send to DM
+
+                // Create DM channel
+                channel = await message.author.createDM()
+
+                // Send link to channel
+                if (channel) {
+                    this._profile.sources(user).subscribe(s =>
+                        channel.send(`Hey ${message.author.toString()}, your current sources:\n${
+                            s.reduce((str, source, i, arr) => str += `${source.card.brand[0].toUpperCase() + source.card.brand.slice(1)} ${source.type[0].toUpperCase() + source.type.slice(1)} - ${source.card.last4} (${source.card.exp_month}/${source.card.exp_year})${i !== arr.length-1 ? '\n':''}`, '')
+                        }`)
+                    )
+                    return
+                }
+
+                // Send error if no channel
+                message.reply(`Hey uhm, I couldn't DM you, can you make sure I'm not blocked or anything?`)
                 break
         }
     }

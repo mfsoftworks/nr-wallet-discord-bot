@@ -1,16 +1,19 @@
+import { HttpService } from "@nestjs/common";
+
 export class Profile {
     public token: string;
-    public balance: {
-        available: number;
-        pending: number;
-    }
     public currency: string;
-    public sources: any;
     public id: string;
-    public linked = false;
 
-    constructor (data?: object) {
+    constructor (data: {id?: string; token?: string; currency?: string}, private readonly http?: HttpService) {
         Object.assign(this, data)
-        this.linked = !!this.token
+    }
+
+    get linked(): boolean {
+        return !!this.token;
+    }
+
+    set linked(linked: boolean) {
+        return
     }
 }
