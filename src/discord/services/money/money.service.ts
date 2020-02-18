@@ -56,6 +56,7 @@ export class MoneyService {
     updateRates(): Observable<OpenExchangeRates> {
         return this.http.get<OpenExchangeRates>(
             `${config.get('fx.url')}`, {
+                // eslint-disable-next-line @typescript-eslint/camelcase
                 params: { app_id: config.get('fx.client_id') }
             }
         ).pipe(

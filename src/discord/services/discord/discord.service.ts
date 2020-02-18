@@ -1,7 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { Client, RichEmbed, Message, Attachment, User, DMChannel } from 'discord.js'
 import { SHA256, enc } from 'crypto-js'
-import accounting from 'accounting'
 import config from 'config'
 import { Colours } from '../../core/colours.enum'
 import { Profile } from '../../../shared/core/profile'
@@ -11,6 +10,7 @@ import { TransactionService } from '../../../shared/services/transaction/transac
 import { Args } from '../../core/args';
 import { BalanceAmount } from 'src/discord/core/balance';
 import { MoneyService } from '../money/money.service';
+import { tap } from 'rxjs/operators';
 
 interface Keywords {
     currency: string[];
@@ -23,8 +23,9 @@ export class DiscordService {
     private static readonly colours = Colours
     private static readonly keywords: Keywords = {
         currency: [
-            'usd',
-            'sgd'
+            'aud',
+            'sgd',
+            'eur'
         ], action: [
             'split',
             'each'
@@ -54,10 +55,11 @@ export class DiscordService {
         console.log('Discord monitor running')
     }
 
-    private async onMessage(message: Message): Promise<Message | Message[]> {
-        let channel: DMChannel
-        let user: Profile
+    private async onMessage(message: Message): Promise<void> {
+        const user: Profile = await this._profile.get(message.author.id)
         const args = new Args(message.content)
+        let channel: DMChannel
+
         console.log('Received', args)
 
         switch (args[0]) {
@@ -73,6 +75,7 @@ export class DiscordService {
                     '`$source [source]` View and set available payment sources (`$source` to view `$source [source]` to set)\n\n' +
                     '`$sauce` Same as `$source`\n\n' +
                     '`$wallet` Get a link to your NR Wallet\n\n' +
+                    '*To detect the correct amount, money needs to have a `.` decimal seperator*\n\n' +
                     '*Ex: $send @nygmarose @knightofhonour 13.37 SGD each*'
                 )
                 break
@@ -83,11 +86,10 @@ export class DiscordService {
                 break
 
             case '$link':
-                user = await this._profile.get(message.author.id)
-
                 // If user is linked reply with status
                 if (user.linked) {
-                    return message.reply(`It looks like you're already linked up`)
+                    message.reply(`It looks like you're already linked up`)
+                    return
                 }
 
                 // Create DM channel
@@ -120,10 +122,10 @@ export class DiscordService {
                 break
 
             case '$balance':
-                user = await this._profile.get(message.author.id)
-
                 // Check if user is linked
-                if (!this.linkCheck(user, message)) return
+                if (!this.linkCheck(user, message)) {
+                    return
+                }
 
                 // Get user balance
                 this._profile.balance(user).subscribe((b: BalanceAmount) => {
@@ -133,10 +135,10 @@ export class DiscordService {
                 break
 
             case '$wallet':
-                user = await this._profile.get(message.author.id)
-
                 // Check if user is linked
-                if (!this.linkCheck(user, message)) return
+                if (!this.linkCheck(user, message)) {
+                    return
+                }
 
                 message.reply(
                     new RichEmbed()
@@ -149,14 +151,15 @@ export class DiscordService {
                 break
 
             case '$send':
-                user = await this._profile.get(message.author.id)
-
                 // Check if user is linked
-                if (!this.linkCheck(user, message)) return
+                if (!this.linkCheck(user, message)) {
+                    return
+                }
 
                 // Check if DM or group
                 if (!message.guild) {
-                    return message.reply(`Hey ${message.author.toString()}, I'll need you to do that in a group to send to someone`)
+                    message.reply(`Hey ${message.author.toString()}, I'll need you to do that in a group to send to someone`)
+                    return
                 }
 
                 // Create transaction
@@ -165,25 +168,26 @@ export class DiscordService {
                 // Get currency mentioned
                 transaction.currency = args.findKeyword(this.getKeywords('currency'), 1)
                 if (!transaction.currency) {
-                    return message.reply(`Awesome. Now, can you send that again with a currency?`)
+                    message.reply(`Awesome. Now, can you send that again with a currency?`)
+                    return
                 }
 
                 // Get amount mentioned
                 transaction.amount = args.findFirstNumber(1)
                 if (!transaction.amount) {
-                    return message.reply(`Uhhh I couldn't see any amount there`)
+                    message.reply(`Uhhh I couldn't see any amount there`)
+                    return
                 }
 
                 // Format amount to decimal number
-                transaction.amount = DiscordService.formatCurrency(transaction.amount as number, transaction.currency as string)
-
-                // TODO: Convert currencies if needed (transaction.amount -> user.source.default)
+                transaction.amount = this._money.unformat(transaction.amount as number, transaction.currency as string)
 
                 // Get users mentioned
                 transaction.users = message.mentions.users.array().filter(u => u.id !== message.author.id && !u.bot && !!message.guild.member(u)).map(u => u.id)
 
                 if (!transaction.users.length) {
-                    return message.reply(`That would be awesome but I couldn't see anyone to send to, make sure you mention them *and* they're in this group`)
+                    message.reply(`That would be awesome but I couldn't see anyone to send to, make sure you mention them *and* they're in this group`)
+                    return
                 }
 
                 // Check if users are all linked
@@ -192,14 +196,16 @@ export class DiscordService {
                 )
                 const unlinked: Profile[] = profiles.filter((p: Profile) => !p.linked)
                 if (unlinked.length) {
-                    return message.reply(`${unlinked.length > 1 ? 'These users' : 'This user'} hasn't linked an account: ${unlinked.map((u: Profile) => `<@${u.id}>`).join(', ')}`)
+                    message.reply(`${unlinked.length > 1 ? 'These users' : 'This user'} hasn't linked an account: ${unlinked.map((u: Profile) => `<@${u.id}>`).join(', ')}`)
+                    return
                 }
 
                 // If multiple users check for action to perform
                 if (transaction.users.length > 1) {
                     transaction.action = args.findKeyword(this.getKeywords('action'), 1)
                     if (!transaction.action) {
-                        return message.reply(`Can you copy paste that message but let me know if I should send then ${transaction.amount} ${transaction.currency} \`each\` or should I \`split\` between them`)
+                        message.reply(`Can you copy paste that message but let me know if I should send then ${transaction.amount} ${transaction.currency} \`each\` or should I \`split\` between them`)
+                        return
                     }
                 }
 
@@ -207,55 +213,67 @@ export class DiscordService {
                 this._transaction.save(transaction)
 
                 // Return confirmation message
-                return message.reply(transaction.toString())
+                message.reply(this._transaction.toString(transaction))
+                break
 
             case '$confirm':
                 // Check not a DM
                 if (!message.guild) {
-                    return message.reply(`Well you can't pay me so I don't have a transaction for this DM`)
+                    message.reply(`Well you can't pay me so... I don't have any transaction to do for this DM`)
+                    return
                 }
 
-                user = await this._profile.get(message.author.id)
-
                 // Check if user is linked
-                if (!this.linkCheck(user, message)) return
+                if (!this.linkCheck(user, message)) {
+                    return
+                }
 
                 // Get pending transaction
                 const confirmation = await this._transaction.get(message)
 
                 // Return an error if no pending transaction
                 if (!confirmation) {
-                    return message.reply('Sure thing! I couldn\'t find anything to confirm though.')
+                    message.reply('Sure thing! I couldn\'t find anything to confirm though.')
+                    return
                 }
 
-                // TODO: Send out the money
-                // transaction.execute()
+                // Get transaction recipe
+                const execute = await this._transaction.execute(confirmation, message)
 
-                // DM the recipients
-                confirmation.users.forEach((u: string | User) => {
-                    u = this.client.users.find('id', u)
-                    u.createDM().then((c: DMChannel) => {
-                        c.send(`Hey ${u.toString()}! ${this.client.users.find('id', confirmation.sender).username} sent a full ${confirmation.amount} ${confirmation.currency} to your NR Wallet!`)
+                // Send update message
+                message.reply('Roger, processing now')
+
+                // Execute and respond with status
+                execute.pipe(
+                    tap(console.log),
+                ).subscribe(() => {
+                    // DM the recipients
+                    confirmation.users.forEach((u: string | User) => {
+                        u = this.client.users.find('id', u)
+                        u.createDM().then((c: DMChannel) => {
+                            c.send(`Hey ${u.toString()}! ${this.client.users.find('id', confirmation.sender).username} sent a full ${this._money.format(confirmation.amount as number, confirmation.currency as string)} to your NR Wallet!`)
+                        })
                     })
-                })
 
-                // Confirm with the sender
-                message.reply('Will do. Everything\'s been sent out and everyone DM\'d')
+                    // Confirm with the sender
+                    message.reply('Done! Everything\'s been sent out and everyone DM\'d')
+
+                    // Clear tx
+                    this._transaction.clear(confirmation)
+                }, err => message.reply(`Unfortunately, an error happened in sending ${JSON.stringify(err)}`))
                 break
 
             case '$source':
             case '$sauce':
-                user = await this._profile.get(message.author.id)
-
                 // Check if user is linked
-                if (!this.linkCheck(user, message)) return
+                if (!this.linkCheck(user, message)) {
+                    return
+                }
 
                 // Send warning if guild
                 if (message.guild) {
                     message.reply(`Shhh... we shouldn't talk about that here, I'll DM you`)
                 }
-
-                // TODO: Get sources and send to DM
 
                 // Create DM channel
                 channel = await message.author.createDM()
@@ -264,7 +282,7 @@ export class DiscordService {
                 if (channel) {
                     this._profile.sources(user).subscribe(s =>
                         channel.send(`Hey ${message.author.toString()}, your current sources:\n${
-                            s.reduce((str, source, i, arr) => str += `${source.card.brand[0].toUpperCase() + source.card.brand.slice(1)} ${source.type[0].toUpperCase() + source.type.slice(1)} - ${source.card.last4} (${source.card.exp_month}/${source.card.exp_year})${i !== arr.length-1 ? '\n':''}`, '')
+                            s.reduce((str, source, i, arr) => str += `${source.card.brand[0].toUpperCase() + source.card.brand.slice(1)} ${source.type[0].toUpperCase() + source.type.slice(1)} — ${source.card.last4}\t(${source.card.exp_month}/${source.card.exp_year})${i !== arr.length-1 ? '\n':''}`, '')
                         }`)
                     )
                     return
@@ -272,6 +290,10 @@ export class DiscordService {
 
                 // Send error if no channel
                 message.reply(`Hey uhm, I couldn't DM you, can you make sure I'm not blocked or anything?`)
+                break
+
+            case '$cena':
+                this.unauthorised(message)
                 break
         }
     }
@@ -299,15 +321,6 @@ export class DiscordService {
 
     // Reply with an unauthorised message
     private unauthorised(message: Message): Promise<Message | Message[]> {
-        return message.reply(new Attachment(`I'm sorry ${message.author.toString()}, I can't do that`, 'https://media1.tenor.com/images/86937766f3f44884362c716e8f1d0e19/tenor.gif'))
-    }
-
-    // Format currency input
-    private static formatCurrency(value: number, currency: string): number {
-        if (['EUR'].includes(currency)) {
-            return accounting.unformat(value.toString(), ',')
-        } else {
-            return accounting.unformat(value.toString())
-        }
+        return message.channel.send(`I'm sorry ${message.author.toString()}, you can't see this`, new Attachment('https://media1.tenor.com/images/86937766f3f44884362c716e8f1d0e19/tenor.gif'))
     }
 }

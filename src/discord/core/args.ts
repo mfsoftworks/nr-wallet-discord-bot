@@ -10,13 +10,16 @@ export class Args extends Array<string> {
     }
 
     // Find first number in args
-    findFirstNumber(offset = 0, excludes?: string[], notEqual?: number[]): number | boolean {
+    findFirstNumber(offset = 0, excludes: string[] = [], notEqual: number[] = []): number | boolean {
         // Find first amount in args
-        const amount = this.find((c, i) => i >= offset && !excludes.includes(c) && this.isNumber(c))
+        let amount = this.find((c, i) => i >= offset && !excludes.includes(c) && this.isNumber(c.replace(',','')))
 
         // Return valid number or false
-        if (amount && this.isNumber(amount) && !notEqual.includes(parseFloat(amount)) && parseFloat(amount) > 0) {
-            return parseFloat(amount)
+        if (amount) {
+            amount = amount.replace(',','')
+            if (this.isNumber(amount) && !notEqual.includes(parseFloat(amount)) && parseFloat(amount) > 0) {
+                return parseFloat(amount)
+            }
         }
         return false
     }
@@ -40,7 +43,7 @@ export class Args extends Array<string> {
     }
 
     // Combine args into string
-    combineArgs(excludes: string[], offset = 0): string {
+    combineArgs(excludes: string[] = [], offset = 0): string {
         return this.reduce(
             (t, c, i) => t += (i < offset || excludes.includes(c)) ? '' : `${c} `,
         '').trim().toLowerCase()
@@ -48,7 +51,7 @@ export class Args extends Array<string> {
 
     // Number type checking
     private isNumber(value: string | number): boolean {
-       return (
+        return (
             (value != null) &&
             (value !== '') &&
             !isNaN(Number(value.toString()))

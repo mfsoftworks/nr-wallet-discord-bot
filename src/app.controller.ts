@@ -60,7 +60,8 @@ export class AppController {
             )),
             map(a => a.data),
             map(account => {
-                // Set user currency
+                // Set user currency and id
+                user.wallet_id = account.id;
                 user.currency = account.defaultCurrency;
                 console.log('Account', user);
                 console.log('JSON:', JSON.stringify(user));

@@ -5,6 +5,7 @@ import { DiscordModule } from './discord/discord.module';
 import config from 'config';
 import { ProfileService } from './shared/services/profile/profile.service';
 import { TransactionService } from './shared/services/transaction/transaction.service';
+import { MoneyService } from './discord/services/money/money.service';
 
 @Module({
     imports: [
@@ -14,6 +15,7 @@ import { TransactionService } from './shared/services/transaction/transaction.se
     ],
     controllers: [AppController],
     providers: [
+        MoneyService,
         ProfileService,
         TransactionService
     ],

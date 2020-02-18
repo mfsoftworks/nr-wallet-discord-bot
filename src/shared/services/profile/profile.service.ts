@@ -32,6 +32,7 @@ export class ProfileService {
         )
     }
 
+    // Get user payment sources
     public sources(user: Profile): Observable<any[]> {
         return this.http.get(
             `${config.get<Balance>('wallet.api')}/me/payment/source`, {
@@ -45,6 +46,7 @@ export class ProfileService {
         );
     }
 
+    // Get user balance
     public balance(user: Profile): Observable<BalanceAmount> {
         return this.http.get(
             `${config.get<Balance>('wallet.api')}/me/balance`, {
