@@ -4,7 +4,7 @@ import { RedisService } from 'nestjs-redis';
 import { Message, TextChannel } from 'discord.js';
 import { Transaction } from '../../core/transaction';
 import { Redis } from 'ioredis';
-import { MoneyService } from '../../../discord/services/money/money.service';
+import { MoneyService } from '../money/money.service';
 import { Profile } from '../../core/profile';
 import { ProfileService } from '../profile/profile.service';
 import { Observable, forkJoin } from 'rxjs';

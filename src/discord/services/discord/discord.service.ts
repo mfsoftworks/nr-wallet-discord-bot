@@ -9,7 +9,7 @@ import { ProfileService } from '../../../shared/services/profile/profile.service
 import { TransactionService } from '../../../shared/services/transaction/transaction.service';
 import { Args } from '../../core/args';
 import { BalanceAmount } from 'src/discord/core/balance';
-import { MoneyService } from '../money/money.service';
+import { MoneyService } from '../../../shared/services/money/money.service';
 import { tap } from 'rxjs/operators';
 
 interface Keywords {

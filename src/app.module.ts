@@ -1,23 +1,17 @@
-import { Module, HttpModule } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { RedisModule } from 'nestjs-redis';
 import { AppController } from './app.controller';
 import { DiscordModule } from './discord/discord.module';
 import config from 'config';
-import { ProfileService } from './shared/services/profile/profile.service';
-import { TransactionService } from './shared/services/transaction/transaction.service';
-import { MoneyService } from './discord/services/money/money.service';
+import { SharedModule } from './shared/shared.module';
 
 @Module({
     imports: [
-        HttpModule,
+        SharedModule,
         RedisModule.register(config.get('redis')),
         DiscordModule
     ],
     controllers: [AppController],
-    providers: [
-        MoneyService,
-        ProfileService,
-        TransactionService
-    ],
+    providers: [],
 })
 export class AppModule {}
