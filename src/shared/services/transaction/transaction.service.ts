@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/camelcase */
-import { Injectable, HttpService } from '@nestjs/common';
+import { Injectable, HttpService, OnApplicationBootstrap } from '@nestjs/common';
 import { RedisService } from 'nestjs-redis';
 import { Message, TextChannel } from 'discord.js';
 import { Transaction } from '../../core/transaction';
@@ -13,16 +13,19 @@ import config from 'config';
 import { map, switchMap, tap, mergeMap } from 'rxjs/operators';
 
 @Injectable()
-export class TransactionService {
+export class TransactionService implements OnApplicationBootstrap {
     private client: Redis;
 
     constructor(
-        private http: HttpService,
-        private _redis: RedisService,
+        private readonly http: HttpService,
+        private readonly _redis: RedisService,
         private _money: MoneyService,
         private _profile: ProfileService
-    ) {
-        this.client = _redis.getClient();
+    ) {}
+
+    public onApplicationBootstrap(): void {
+        this.client = this._redis.getClient();
+        console.log(this.constructor.name, 'established Redis connection');
     }
 
     // Save pending transaction

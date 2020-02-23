@@ -1,4 +1,4 @@
-import { Injectable, HttpService } from '@nestjs/common';
+import { Injectable, HttpService, OnApplicationBootstrap } from '@nestjs/common';
 import { RedisService } from 'nestjs-redis';
 import { Profile } from '../../core/profile';
 import { Redis } from 'ioredis';
@@ -8,14 +8,17 @@ import { Observable } from 'rxjs';
 import { map, tap } from 'rxjs/operators';
 
 @Injectable()
-export class ProfileService {
+export class ProfileService implements OnApplicationBootstrap {
     private client: Redis;
 
     constructor(
-        private _redis: RedisService,
-        private http: HttpService
-    ) {
-        this.client = _redis.getClient();
+        private readonly _redis: RedisService,
+        private readonly http: HttpService
+    ) {}
+
+    public onApplicationBootstrap(): void {
+        this.client = this._redis.getClient();
+        console.log(this.constructor.name, 'established Redis connection');
     }
 
     // Save user

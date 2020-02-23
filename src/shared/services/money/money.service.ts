@@ -1,19 +1,33 @@
-import { Injectable, HttpService } from '@nestjs/common';
+import { Injectable, HttpService, OnModuleInit } from '@nestjs/common';
 import Decimal from 'decimal.js';
 import * as fx from 'money';
 import { Observable, timer } from 'rxjs';
-import { map, share, mergeMap } from 'rxjs/operators';
+import { map, share, mergeMap, tap, catchError } from 'rxjs/operators';
 import config from 'config';
 import { OpenExchangeRates } from 'src/discord/core/open-exchange-rates';
 import { CurrencyDecimalPlaces } from 'src/discord/core/currency-decimal-places.enum';
 
 @Injectable()
-export class MoneyService {
-    constructor(private http: HttpService) {
-        timer(0, 1000 * 60 * 60).pipe(
-            mergeMap(() => this.updateRates()),
-            share()
-        );
+export class MoneyService implements OnModuleInit {
+    interval$: Observable<OpenExchangeRates> = timer(0, 1000 * 60 * 60).pipe(
+        mergeMap(() => this.updateRates()),
+        share()
+    );
+
+    constructor(private http: HttpService) {}
+
+    public async onModuleInit(): Promise<void> {
+        return new Promise((resolve, reject) => {
+            this.interval$.pipe(
+                tap(() => console.log(this.constructor.name, 'interval started'))
+            ).subscribe(
+                () => resolve(),
+                err => {
+                    console.warn(err);
+                    reject(err);
+                }
+            );
+        });
     }
 
     // Take base currency and convert to a displayable decimal
@@ -62,7 +76,6 @@ export class MoneyService {
         ).pipe(
             map(d => d.data),
             map((data: OpenExchangeRates) => {
-                console.log('Open exchange rates:', data)
                 fx.base = data.base;
                 fx.rates = data.rates;
                 return data

@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, OnApplicationBootstrap } from '@nestjs/common';
 import { Client, RichEmbed, Message, Attachment, User, DMChannel } from 'discord.js'
 import { SHA256, enc } from 'crypto-js'
 import config from 'config'
@@ -18,7 +18,7 @@ interface Keywords {
 }
 
 @Injectable()
-export class DiscordService {
+export class DiscordService implements OnApplicationBootstrap {
     public client: Client
     private static readonly colours = Colours
     private static readonly keywords: Keywords = {
@@ -36,7 +36,9 @@ export class DiscordService {
         private _money: MoneyService,
         private _profile: ProfileService,
         private _transaction: TransactionService
-    ) {
+    ) {}
+
+    public onApplicationBootstrap(): void {
         // Create client
         this.client = new Client()
 
