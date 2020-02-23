@@ -2,13 +2,13 @@
 import { Controller, Get, Query, HttpService, Redirect } from '@nestjs/common';
 import { SHA256, enc } from 'crypto-js';
 import config from 'config';
-import { ProfileService } from './shared/services/profile/profile.service';
-import { Profile } from './shared/core/profile';
+import { ProfileService } from '../../shared/services/profile/profile.service';
+import { Profile } from '../../shared/core/profile';
 import { Observable, of } from 'rxjs';
 import { map, tap, catchError, mergeMap } from 'rxjs/operators'
 
 @Controller()
-export class AppController {
+export class AuthController {
     constructor(
         private readonly http: HttpService,
         private _profile: ProfileService
